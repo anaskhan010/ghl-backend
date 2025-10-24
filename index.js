@@ -11,7 +11,7 @@ const patientRoutes = require('./Routes/PatientRoutes/patientRoutes');
 
 
 const corsOptions = {
-  origin: ['http://localhost:5173', 'http://localhost:3000', 'https://ghlbackend.research-hero.com','https://ghlstudies.research-hero.com'],
+  origin: ['http://localhost:5173', 'http://localhost:3000', 'https://ghlbackend.research-hero.com','https://ghlstudies.research-hero.com','https://ghlpatient.research-hero.com'],
   credentials: true,
   optionSuccessStatus: 204,
 };
