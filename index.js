@@ -1,10 +1,13 @@
+// Load environment variables FIRST before any other imports
+const dotenv = require('dotenv');
+dotenv.config({ path: './Config/config.env' });
+
+// Now import other modules
 const express = require('express');
 const db = require('./Config/DBConnection');
-const dotenv = require('dotenv');
 const cors = require('cors');
 const studyRoutes = require('./Routes/StudyRoutes/StudyRoutes');
-
-dotenv.config({ path: './Config/config.env' });
+const patientRoutes = require('./Routes/PatientRoutes/patientRoutes');
 
 
 const corsOptions = {
@@ -21,6 +24,7 @@ app.use(cors(corsOptions));
 
 app.use(express.json());
 app.use('/api/study', studyRoutes);
+app.use('/api/patient', patientRoutes);
 
 
 
