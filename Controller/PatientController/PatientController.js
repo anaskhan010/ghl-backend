@@ -251,22 +251,31 @@ const getPatient = async(req, res) => {
 
         console.log(`✅ Merged ${mergedContacts.length} contacts with local database data`);
 
+        // Filter contacts to only include those with tags
+        const contactsWithTags = mergedContacts.filter(contact => {
+            return contact.tags && Array.isArray(contact.tags) && contact.tags.length > 0;
+        });
+
+        console.log(`🏷️ Filtered to ${contactsWithTags.length} contacts with tags (from ${mergedContacts.length} total contacts)`);
+
         // Log a sample contact to verify custom fields are included
-        if (mergedContacts.length > 0) {
-            const sampleContact = mergedContacts.find(c => c.customFields && c.customFields.length > 0);
+        if (contactsWithTags.length > 0) {
+            const sampleContact = contactsWithTags.find(c => c.customFields && c.customFields.length > 0);
             if (sampleContact) {
-                console.log('📋 Sample contact with custom fields:', {
+                console.log('📋 Sample contact with custom fields and tags:', {
                     id: sampleContact.id,
                     firstName: sampleContact.firstName,
+                    tags: sampleContact.tags,
                     customFields: sampleContact.customFields
                 });
             }
         }
 
         res.status(200).json({
-            message: "Contacts fetched successfully from GHL and merged with local database",
-            contacts: mergedContacts,
-            total: ghlResponse.data.total || mergedContacts.length
+            message: "Contacts with tags fetched successfully from GHL and merged with local database",
+            contacts: contactsWithTags,
+            total: contactsWithTags.length,
+            totalBeforeFilter: mergedContacts.length
         });
 
     } catch (error) {
