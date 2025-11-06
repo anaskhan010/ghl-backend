@@ -9,5 +9,6 @@ router.get('/studies', studyController.getStudy);
 router.get('/studies/:id', studyController.getStudyById);
 router.put('/studies/:id', studyController.updateStudy);
 router.delete('/studies/:id', studyController.deleteStudy);
+router.get('/ghl-users', studyController.getGHLUsers);
 
 module.exports = router;

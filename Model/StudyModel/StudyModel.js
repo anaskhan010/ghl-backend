@@ -1,10 +1,10 @@
 const db = require("../../Config/DBConnection")
 
 
-const createStudy = async(name, owner, status) => {
+const createStudy = async(name, owner, status, assigned_recruiter) => {
     try {
-      const query = "INSERT INTO studies (study_name, study_owner, study_status) VALUES (?, ?, ?)";
-      const values = [name, owner, status];
+      const query = "INSERT INTO studies (study_name, study_owner, study_status, assigned_recruiter) VALUES (?, ?, ?, ?)";
+      const values = [name, owner, status, assigned_recruiter];
       const [result] = await db.query(query, values);
       return result;
     } catch (error) {
@@ -89,10 +89,10 @@ const getStudyById = async(id) => {
     }
 }
 
-const updateStudy = async(id, name, owner, status) => {
+const updateStudy = async(id, name, owner, status, assigned_recruiter) => {
     try {
-        const query = "UPDATE studies SET study_name = ?, study_owner = ?, study_status = ? WHERE study_id = ?";
-        const values = [name, owner, status, id];
+        const query = "UPDATE studies SET study_name = ?, study_owner = ?, study_status = ?, assigned_recruiter = ? WHERE study_id = ?";
+        const values = [name, owner, status, assigned_recruiter, id];
         const [result] = await db.query(query, values);
         return result;
     } catch (error) {
