@@ -17,9 +17,7 @@ const GHL_CUSTOM_FIELD_IDS = {
 const buildCustomFieldsForCreate = (patientData) => {
     const customFields = [];
 
-    if (patientData.study_enrolled_id) {
-        customFields.push({ key: "study", field_value: String(patientData.study_enrolled_id) });
-    }
+    // Study is saved as a tag, not as a custom field
     if (patientData.patientLeadSource) {
         customFields.push({ key: "patient_lead_source", field_value: patientData.patientLeadSource });
     }
@@ -79,10 +77,7 @@ const buildCustomFieldsForCreate = (patientData) => {
 const buildCustomFieldsForUpdate = (patientData, customFieldMap = {}) => {
     const customFields = [];
 
-
-    if (patientData.study_enrolled_id && customFieldMap['study']) {
-        customFields.push({ id: customFieldMap['study'], field_value: String(patientData.study_enrolled_id) });
-    }
+    // Study is saved as a tag, not as a custom field
     if (patientData.patientLeadSource && customFieldMap['patient_lead_source']) {
         customFields.push({ id: customFieldMap['patient_lead_source'], field_value: patientData.patientLeadSource });
     }

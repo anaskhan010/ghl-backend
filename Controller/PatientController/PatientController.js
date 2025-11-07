@@ -1,4 +1,5 @@
 const patientModel = require("../../Model/PatientModal/PatientModel")
+const studyModel = require("../../Model/StudyModel/StudyModel")
 const axios = require('axios');
 const { buildCustomFieldsForCreate, buildCustomFieldsForUpdate, fetchCustomFieldMap } = require('../../Config/ghlCustomFields');
 
@@ -31,6 +32,20 @@ const createPatient = async (req, res) => {
       console.log("📋 Patient Data received:", JSON.stringify(patientData, null, 2));
       console.log("📋 Custom Fields built:", JSON.stringify(customFields, null, 2));
 
+      // Fetch study name if study_enrolled_id is provided
+      let studyTag = null;
+      if (patientData.study_enrolled_id) {
+        try {
+          const studyData = await studyModel.getStudyById(patientData.study_enrolled_id);
+          if (studyData && studyData.length > 0) {
+            studyTag = studyData[0].study_name;
+            console.log("📚 Study tag to add:", studyTag);
+          }
+        } catch (error) {
+          console.error("⚠️ Error fetching study name:", error.message);
+        }
+      }
+
       const ghlPayload = {
         firstName: patientData.patientLeadName || "Unknown",
         lastName: patientData.lastName || "",
@@ -43,6 +58,12 @@ const createPatient = async (req, res) => {
       // Add custom fields to payload if any exist
       if (customFields.length > 0) {
         ghlPayload.customFields = customFields;
+      }
+
+      // Add study as a tag if it exists
+      if (studyTag) {
+        ghlPayload.tags = [studyTag];
+        console.log("🏷️ Adding study tag to contact:", studyTag);
       }
 
       Object.keys(ghlPayload).forEach(key => {
@@ -510,6 +531,26 @@ const updatePatient = async(req, res) => {
             console.log("📝 Custom fields to update:", JSON.stringify(customFieldsToUpdate, null, 2));
         } else {
             console.log("ℹ️ No custom fields to update");
+        }
+
+        // Fetch study name if study_enrolled_id is provided and add as tag
+        let studyTag = null;
+        if (patientData.study_enrolled_id) {
+            try {
+                const studyData = await studyModel.getStudyById(patientData.study_enrolled_id);
+                if (studyData && studyData.length > 0) {
+                    studyTag = studyData[0].study_name;
+                    console.log("📚 Study tag to add:", studyTag);
+                }
+            } catch (error) {
+                console.error("⚠️ Error fetching study name:", error.message);
+            }
+        }
+
+        // Add study as a tag if it exists
+        if (studyTag) {
+            ghlPayload.tags = [studyTag];
+            console.log("🏷️ Adding study tag to contact:", studyTag);
         }
 
         // Ensure we have at least one field to update
