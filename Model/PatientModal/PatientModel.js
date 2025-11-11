@@ -3,7 +3,7 @@ const db = require("../../Config/DBConnection")
 
 const createPatient = async(patientData, ghlContactId) => {
     try {
-        const query = "INSERT INTO patients (ghl_contact_id, study_enrolled_id, patient_lead_source, banned, patient_lead_owner, patient_lead_name, last_name, phone, phone2, email, dob, age, height, weight, habits, medication, diagnosis, surgeries, status, created_by, modified_by, qualified_status, dnq, not_interested_reason) VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        const query = "INSERT INTO patients (ghl_contact_id, study_enrolled_id, patient_lead_source, banned, patient_lead_owner, patient_lead_name, last_name, phone, phone2, email, dob, age, height, weight, habits, medication, diagnosis, surgeries,notes, status, created_by, modified_by, qualified_status, dnq, not_interested_reason) VALUES (?,?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         const values = [
             ghlContactId || null,
             patientData.study_enrolled_id || null,
@@ -24,6 +24,7 @@ const createPatient = async(patientData, ghlContactId) => {
             patientData.medications || null,
             patientData.diagnosis || null,
             patientData.surgeries || null,
+            patientData.notes || null,
             patientData.status || null,
             patientData.createdBy || null,
             patientData.modifiedBy || null,
