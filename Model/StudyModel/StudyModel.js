@@ -56,7 +56,7 @@ const deleteStudyLeadSources = async(studyId) => {
 
 const getStudy = async() => {
     try {
-        const query = "SELECT * FROM studies ORDER BY study_id DESC";
+        const query = "SELECT * FROM studies";
         const [result] = await db.query(query);
 
         // Fetch lead sources for each study
