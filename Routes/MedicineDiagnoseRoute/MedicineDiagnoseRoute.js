@@ -15,4 +15,14 @@ router.get('/diagnosis/:id', medicineDiagnoseController.getDiagnosisById);
 router.put('/diagnosis/:id', medicineDiagnoseController.updateDiagnosis);
 router.delete('/diagnosis/:id', medicineDiagnoseController.deleteDiagnosis);
 
+router.post('/surgeries', medicineDiagnoseController.createSurgeries);
+router.get('/surgeries', medicineDiagnoseController.getSurgeries);
+router.get('/surgeries/:id', medicineDiagnoseController.getSurgeriesById);
+router.put('/surgeries/:id', medicineDiagnoseController.updateSurgeries);
+router.delete('/surgeries/:id', medicineDiagnoseController.deleteSurgeries);
+
+
+router.get('/habits', medicineDiagnoseController.getHabits);
+
+
 module.exports = router;

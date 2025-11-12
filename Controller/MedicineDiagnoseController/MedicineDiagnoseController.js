@@ -100,6 +100,67 @@ const deleteDiagnosis = async(req, res) => {
     }
 }
 
+const createSurgeries = async(req, res) => {
+    try {
+        const { name } = req.body;
+        const surgeries = await MedicineDiagnoseModel.createSurgeries(name);
+        res.status(200).json(surgeries);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+const getSurgeries = async(req, res) => {
+    try {
+        const surgeries = await MedicineDiagnoseModel.getSurgeries();
+        res.status(200).json(surgeries);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+const getSurgeriesById = async(req, res) => {
+    try {
+        const { id } = req.params;
+        const surgeries = await MedicineDiagnoseModel.getSurgeriesById(id);
+        res.status(200).json(surgeries);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+const updateSurgeries = async(req, res) => {
+    try {
+        const { id } = req.params;
+        const { name } = req.body;
+        const surgeries = await MedicineDiagnoseModel.updateSurgeries(id, name);
+        res.status(200).json(surgeries);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+const deleteSurgeries = async(req, res) => {
+    try {
+        const { id } = req.params;
+        const surgeries = await MedicineDiagnoseModel.deleteSurgeries(id);
+        res.status(200).json(surgeries);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+
+const getHabits = async(req, res) => {
+    try {
+        const habits = await MedicineDiagnoseModel.getHabits();
+        res.status(200).json(habits);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+
 module.exports = {
     createMedicine,
     getMedicine,
@@ -110,5 +171,11 @@ module.exports = {
     getDiagnosis,
     getDiagnosisById,
     updateDiagnosis,
-    deleteDiagnosis
+    deleteDiagnosis,
+    createSurgeries,
+    getSurgeries,
+    getSurgeriesById,
+    updateSurgeries,
+    deleteSurgeries,
+    getHabits
 }

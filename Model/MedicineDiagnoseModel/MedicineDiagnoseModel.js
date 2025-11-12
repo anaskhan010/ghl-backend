@@ -109,6 +109,74 @@ const deleteDiagnosis = async(id) => {
     }
 }
 
+const createSurgeries = async(name) => {
+    try {
+        const query = "INSERT INTO surgeries (surgery_name) VALUES (?)";
+        const values = [name];
+        const [result] = await db.query(query, values);
+        return result;
+    } catch (error) {
+        throw error;
+    }
+}
+
+const getSurgeries = async() => {
+    try {
+        const query = "SELECT * FROM surgeries";
+        const [result] = await db.query(query);
+        return result;
+    } catch (error) {
+        throw error;
+    }
+}
+
+const getSurgeriesById = async(id) => {
+    try {
+        const query = "SELECT * FROM surgeries WHERE surgery_id = ?";
+        const values = [id];
+        const [result] = await db.query(query, values);
+        return result;
+    } catch (error) {
+        throw error;
+    }
+}
+
+const updateSurgeries = async(id, name) => {
+    try {
+        const query = "UPDATE surgeries SET surgery_name = ? WHERE surgery_id = ?";
+        const values = [name, id];
+        const [result] = await db.query(query, values);
+        return result;
+    } catch (error) {
+        throw error;
+    }
+}
+
+
+const deleteSurgeries = async(id) => {
+    try {
+        const query = "DELETE FROM surgeries WHERE surgery_id = ?";
+        const values = [id];
+        const [result] = await db.query(query, values);
+        return result;
+    } catch (error) {
+        throw error;
+    }
+}
+
+const getHabits = async() => {
+    try {
+        const query = "SELECT * FROM habit";
+        const [result] = await db.query(query);
+        return result;
+    } catch (error) {
+        throw error;
+    }
+}
+
+
+
+
 module.exports = {
     createMedicine,
     getMedicine,
@@ -119,5 +187,11 @@ module.exports = {
     getDiagnosis,
     getDiagnosisById,
     updateDiagnosis,
-    deleteDiagnosis
+    deleteDiagnosis,
+    createSurgeries,
+    getSurgeries,
+    getSurgeriesById,
+    updateSurgeries,
+    deleteSurgeries,
+    getHabits
 }
