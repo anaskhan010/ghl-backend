@@ -12,7 +12,7 @@ const medicineDiagnoseRoutes = require('./Routes/MedicineDiagnoseRoute/MedicineD
 
 
 const corsOptions = {
-  origin: ['http://localhost:5173', 'http://localhost:3000', 'https://ghlbackend.research-hero.com','https://ghlstudies.research-hero.com','https://ghlpatient.research-hero.com','https://ghldashboard.research-hero.com, https://ghlmedicinediagnosis.research-hero.com'],
+  origin: ['http://localhost:5173', 'http://localhost:3000', 'https://ghlbackend.research-hero.com','https://ghlstudies.research-hero.com','https://ghlpatient.research-hero.com','https://ghldashboard.research-hero.com', 'https://ghlmedicinediagnosis.research-hero.com'],
   credentials: true,
   optionSuccessStatus: 204,
 };
