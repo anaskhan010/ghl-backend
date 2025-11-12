@@ -8,6 +8,7 @@ const db = require('./Config/DBConnection');
 const cors = require('cors');
 const studyRoutes = require('./Routes/StudyRoutes/StudyRoutes');
 const patientRoutes = require('./Routes/PatientRoutes/patientRoutes');
+const medicineDiagnoseRoutes = require('./Routes/MedicineDiagnoseRoute/MedicineDiagnoseRoute');
 
 
 const corsOptions = {
@@ -25,6 +26,7 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use('/api/study', studyRoutes);
 app.use('/api/patient', patientRoutes);
+app.use('/api/medicine-diagnose', medicineDiagnoseRoutes);
 
 
 
