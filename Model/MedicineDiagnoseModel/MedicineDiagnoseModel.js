@@ -111,7 +111,7 @@ const deleteDiagnosis = async(id) => {
 
 const createSurgeries = async(name) => {
     try {
-        const query = "INSERT INTO surgeries (surgery_name) VALUES (?)";
+        const query = "INSERT INTO surgeries (surgeries_name) VALUES (?)";
         const values = [name];
         const [result] = await db.query(query, values);
         return result;
@@ -122,7 +122,7 @@ const createSurgeries = async(name) => {
 
 const getSurgeries = async() => {
     try {
-        const query = "SELECT * FROM surgeries";
+        const query = "SELECT * FROM surgeries ORDER BY sur_id DESC";
         const [result] = await db.query(query);
         return result;
     } catch (error) {
@@ -132,7 +132,7 @@ const getSurgeries = async() => {
 
 const getSurgeriesById = async(id) => {
     try {
-        const query = "SELECT * FROM surgeries WHERE surgery_id = ?";
+        const query = "SELECT * FROM surgeries WHERE sur_id = ?";
         const values = [id];
         const [result] = await db.query(query, values);
         return result;
@@ -143,7 +143,7 @@ const getSurgeriesById = async(id) => {
 
 const updateSurgeries = async(id, name) => {
     try {
-        const query = "UPDATE surgeries SET surgery_name = ? WHERE surgery_id = ?";
+        const query = "UPDATE surgeries SET surgeries_name = ? WHERE sur_id = ?";
         const values = [name, id];
         const [result] = await db.query(query, values);
         return result;
@@ -155,7 +155,7 @@ const updateSurgeries = async(id, name) => {
 
 const deleteSurgeries = async(id) => {
     try {
-        const query = "DELETE FROM surgeries WHERE surgery_id = ?";
+        const query = "DELETE FROM surgeries WHERE sur_id = ?";
         const values = [id];
         const [result] = await db.query(query, values);
         return result;
