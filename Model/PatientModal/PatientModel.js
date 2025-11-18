@@ -3,7 +3,7 @@ const db = require("../../Config/DBConnection")
 
 const createPatient = async(patientData, ghlContactId) => {
     try {
-        const query = "INSERT INTO patients (ghl_contact_id, study_enrolled_id, patient_lead_source, banned, patient_lead_owner, patient_lead_name, last_name, phone, phone2, email, dob, age, height, weight, habits, medication, diagnosis, surgeries,notes, status, created_by, modified_by, qualified_status, dnq, not_interested_reason) VALUES (?,?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        const query = "INSERT INTO patients (ghl_contact_id, study_enrolled_id, patient_lead_source, banned, patient_lead_owner, patient_lead_name, last_name, phone, phone2, email, dob, age, height, weight, habits, medication, diagnosis, surgeries,notes, status, created_by, modified_by, qualified_status, dnq, not_interested_reason, language, bmi, previous_research_participation, address, city, state, zip_code, pre_screen_form) VALUES (?,?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         const values = [
             ghlContactId || null,
             patientData.study_enrolled_id || null,
@@ -30,7 +30,15 @@ const createPatient = async(patientData, ghlContactId) => {
             patientData.modifiedBy || null,
             patientData.qualifiedStatus || null,
             patientData.dnq || null,
-            patientData.notInterestedReason || null
+            patientData.notInterestedReason || null,
+            patientData.language || null,
+            patientData.bmi || null,
+            patientData.previous_research_participation || null,
+            patientData.address || null,
+            patientData.city || null,
+            patientData.state || null,
+            patientData.zip_code || null,
+            patientData.pre_screen_form || null
         ];
         const [result] = await db.query(query, values);
         return result;
@@ -62,7 +70,7 @@ const getPatientById = async(id) => {
 
 const updatePatient = async(id, patientData) => {
     try {
-        const query = "UPDATE patients SET study_enrolled_id = ?, patient_lead_source = ?, banned = ?, patient_lead_owner = ?, patient_lead_name = ?, last_name = ?, phone = ?, phone2 = ?, email = ?, dob = ?, age = ?, height = ?, weight = ?, habits = ?, medication = ?, diagnosis = ?, surgeries = ?, status = ?, modified_by = ?, qualified_status = ?, dnq = ?, not_interested_reason = ? WHERE patient_id = ?";
+        const query = "UPDATE patients SET study_enrolled_id = ?, patient_lead_source = ?, banned = ?, patient_lead_owner = ?, patient_lead_name = ?, last_name = ?, phone = ?, phone2 = ?, email = ?, dob = ?, age = ?, height = ?, weight = ?, habits = ?, medication = ?, diagnosis = ?, surgeries = ?, status = ?, modified_by = ?, qualified_status = ?, dnq = ?, not_interested_reason = ?, language = ?, bmi = ?, previous_research_participation = ?, address = ?, city = ?, state = ?, zip_code = ?, pre_screen_form = ? WHERE patient_id = ?";
         const values = [
             patientData.study_enrolled_id || null,
             patientData.patientLeadSource || null,
@@ -86,6 +94,14 @@ const updatePatient = async(id, patientData) => {
             patientData.qualifiedStatus || null,
             patientData.dnq || null,
             patientData.notInterestedReason || null,
+            patientData.language || null,
+            patientData.bmi || null,
+            patientData.previous_research_participation || null,
+            patientData.address || null,
+            patientData.city || null,
+            patientData.state || null,
+            patientData.zip_code || null,
+            patientData.pre_screen_form || null,
             id
         ];
         const [result] = await db.query(query, values);
@@ -107,6 +123,16 @@ const deletePatient = async(id) => {
 }
 
 
+const getpatientLeadSource = async() => {
+    try {
+        const query = "SELECT source_name FROM patient_lead_source";
+        const [result] = await db.query(query);
+        return result;
+    } catch (error) {
+        throw error;
+    }
+}
+
 
 
 module.exports = {
@@ -115,5 +141,6 @@ module.exports = {
     getPatientById,
     updatePatient,
     deletePatient,
+    getpatientLeadSource
     
 }

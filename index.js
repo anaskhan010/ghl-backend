@@ -21,7 +21,8 @@ const corsOptions = {
 const app = express();
 app.use(cors(corsOptions));
 
-
+// Serve static files from public folder
+app.use('/public', express.static('public'));
 
 app.use(express.json());
 app.use('/api/study', studyRoutes);

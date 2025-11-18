@@ -1,11 +1,16 @@
 const patientModel = require("../../Model/PatientModal/PatientModel");
 const studyModel = require("../../Model/StudyModel/StudyModel");
 const axios = require("axios");
+const { uploadFileToGHL } = require("../../Utils/fileUpload");
+const { moveFileToPublicFolder } = require("../../Utils/fileStorage");
+
+
 const {
   buildCustomFieldsForCreate,
   buildCustomFieldsForUpdate,
   fetchCustomFieldMap,
 } = require("../../Config/ghlCustomFields");
+
 
 // Load environment variables
 const GHL_API_KEY = process.env.GHL_API_KEY;
@@ -15,6 +20,12 @@ const createPatient = async (req, res) => {
   console.log("Creating patient...");
   try {
     const patientData = req.body;
+
+    // Store file temporarily (will be processed after contact creation)
+    const uploadedFile = req.file;
+    if (uploadedFile) {
+      console.log("📎 File received:", uploadedFile.originalname);
+    }
 
     // Validate required GHL credentials
     if (!GHL_API_KEY) {
@@ -31,8 +42,24 @@ const createPatient = async (req, res) => {
       });
     }
 
-    // Prepare custom fields using helper function
-    const customFields = buildCustomFieldsForCreate(patientData);
+    // Fetch study name if study_enrolled_id is provided
+    let studyName = null;
+    if (patientData.study_enrolled_id) {
+      try {
+        const studyData = await studyModel.getStudyById(
+          patientData.study_enrolled_id
+        );
+        if (studyData && studyData.length > 0) {
+          studyName = studyData[0].study_name;
+          console.log("📚 Study name to add:", studyName);
+        }
+      } catch (error) {
+        console.error("⚠️ Error fetching study name:", error.message);
+      }
+    }
+
+    // Prepare custom fields using helper function (pass studyName)
+    const customFields = buildCustomFieldsForCreate(patientData, studyName);
 
     console.log(
       "📋 Patient Data received:",
@@ -42,22 +69,6 @@ const createPatient = async (req, res) => {
       "📋 Custom Fields built:",
       JSON.stringify(customFields, null, 2)
     );
-
-    // Fetch study name if study_enrolled_id is provided
-    let studyTag = null;
-    if (patientData.study_enrolled_id) {
-      try {
-        const studyData = await studyModel.getStudyById(
-          patientData.study_enrolled_id
-        );
-        if (studyData && studyData.length > 0) {
-          studyTag = studyData[0].study_name;
-          console.log("📚 Study tag to add:", studyTag);
-        }
-      } catch (error) {
-        console.error("⚠️ Error fetching study name:", error.message);
-      }
-    }
 
     const ghlPayload = {
       firstName: patientData.patientLeadName || "Unknown",
@@ -74,9 +85,9 @@ const createPatient = async (req, res) => {
     }
 
     // Add study as a tag if it exists
-    if (studyTag) {
-      ghlPayload.tags = [studyTag];
-      console.log("🏷️ Adding study tag to contact:", studyTag);
+    if (studyName) {
+      ghlPayload.tags = [studyName];
+      console.log("🏷️ Adding study tag to contact:", studyName);
     }
 
     Object.keys(ghlPayload).forEach((key) => {
@@ -90,6 +101,7 @@ const createPatient = async (req, res) => {
     console.log("🔄 Sending request to GHL API:", GHL_API_URL);
     console.log("📦 Payload:", JSON.stringify(ghlPayload, null, 2));
     console.log("🔑 Using API Key:", GHL_API_KEY?.substring(0, 20) + "...");
+    console.log("📍 Location ID:", GHL_LOCATION_ID);
 
     const ghlResponse = await axios.post(GHL_API_URL, ghlPayload, {
       headers: {
@@ -99,9 +111,59 @@ const createPatient = async (req, res) => {
       },
     });
 
-    console.log("✅ GHL API Response:", ghlResponse.data);
+    console.log("✅ GHL API Response Status:", ghlResponse.status);
+    console.log("✅ GHL API Response:", JSON.stringify(ghlResponse.data, null, 2));
     const ghlContactId =
       ghlResponse?.data?.contact?.id || ghlResponse?.data?.id || null;
+
+    // Handle file upload AFTER contact is created (so we have contact ID)
+    if (uploadedFile && ghlContactId) {
+      try {
+        console.log("📤 Processing file upload for contact:", ghlContactId);
+
+        const apikey = 'pit-90b8b257-a701-4883-9ec4-ee09f175df36'
+
+        // 1. Upload to GHL with contact ID as filename
+        const ghlFileUrl = await uploadFileToGHL(uploadedFile, apikey, ghlContactId);
+        console.log("✅ File uploaded to GHL:", ghlFileUrl);
+
+        // 2. Move file to public/{contactId}/ folder
+        const localFileUrl = moveFileToPublicFolder(uploadedFile, ghlContactId);
+        console.log("✅ File moved to public folder:", localFileUrl);
+
+        // 3. Store local file URL in patientData (for database)
+        patientData.pre_screen_form = localFileUrl;
+
+        // 4. Update GHL contact with file URL as custom field
+        try {
+          const updatePayload = {
+            customFields: [
+              { key: "pre_screen_form", field_value: ghlFileUrl }
+            ]
+          };
+
+          await axios.put(
+            `https://services.leadconnectorhq.com/contacts/${ghlContactId}`,
+            updatePayload,
+            {
+              headers: {
+                Authorization: `Bearer ${GHL_API_KEY}`,
+                Version: "2021-07-28",
+                "Content-Type": "application/json",
+              },
+            }
+          );
+          console.log("✅ File URL added to GHL custom field");
+        } catch (ghlUpdateError) {
+          console.error("⚠️ Failed to update GHL with file URL:", ghlUpdateError.message);
+        }
+
+      } catch (error) {
+        console.error("⚠️ File processing failed:", error.message);
+        // Continue without file - don't fail the entire request
+        patientData.pre_screen_form = null;
+      }
+    }
 
     const patient = await patientModel.createPatient(patientData, ghlContactId);
 
@@ -467,16 +529,26 @@ const getPatientById = async (req, res) => {
       GHL_API_KEY
     );
 
-    // Create reverse map: ID -> name (lowercase)
-    // We use lowercase names to match our frontend field names
+    // Create reverse map: ID -> name
+    // Prefer underscore version for consistency with form field names
     const idToNameMap = {};
     Object.keys(customFieldMap).forEach((name) => {
       const fieldId = customFieldMap[name];
-      // Only store lowercase version to avoid duplicates
-      if (name === name.toLowerCase()) {
+      // Prefer underscore version (e.g., "previous_research_participation")
+      // over space version (e.g., "previous research participation")
+      if (!idToNameMap[fieldId]) {
         idToNameMap[fieldId] = name;
+      } else {
+        // If current name has underscores and stored name doesn't, prefer current
+        const hasUnderscores = name.includes('_');
+        const storedHasUnderscores = idToNameMap[fieldId].includes('_');
+        if (hasUnderscores && !storedHasUnderscores) {
+          idToNameMap[fieldId] = name;
+        }
       }
     });
+
+    console.log("📋 ID to Name Map:", idToNameMap);
 
     // Enrich custom fields with field names
     if (contact.customFields && Array.isArray(contact.customFields)) {
@@ -503,6 +575,7 @@ const getPatientById = async (req, res) => {
       console.log("✅ Found local patient record:", {
         patient_id: localPatient.patient_id,
         study_enrolled_id: localPatient.study_enrolled_id,
+        pre_screen_form: localPatient.pre_screen_form,
       });
 
       // Merge study_enrolled_id from local database if it exists
@@ -522,6 +595,13 @@ const getPatientById = async (req, res) => {
           });
         }
       }
+
+      // Add local database data to contact object for reference
+      contact.localData = {
+        patient_id: localPatient.patient_id,
+        study_enrolled_id: localPatient.study_enrolled_id,
+        pre_screen_form: localPatient.pre_screen_form,
+      };
     } else {
       console.log("⚠️ No local patient record found for contact:", id);
     }
@@ -537,10 +617,72 @@ const getPatientById = async (req, res) => {
 
     contact.notes = notesResponse.data.notes || [];
     console.log("✅ Fetched notes for contact:", contact.notes);
+
+    // Fetch uploaded files from GHL for this contact
+    let uploadedFile = null;
+    let allContactFiles = [];
+    try {
+      console.log("🔄 Fetching uploaded files for contact:", id);
+      // Use the correct endpoint: /medias/files with query parameters
+      const filesUrl = `https://services.leadconnectorhq.com/medias/files?locationId=${GHL_LOCATION_ID}`;
+      console.log("📁 Files URL:", filesUrl);
+      const filesResponse = await axios.get(filesUrl, {
+        headers: {
+          Authorization: `Bearer ${GHL_API_KEY}`,
+          Accept: "application/json",
+        },
+      });
+
+      console.log("📁 Files API Response:", JSON.stringify(filesResponse.data, null, 2));
+      const allFiles = filesResponse.data.medias || filesResponse.data.files || filesResponse.data || [];
+      console.log(`✅ Found ${allFiles.length} total files in GHL`);
+
+      // Filter files for this specific contact ID
+      allContactFiles = allFiles.filter(file =>
+        file.name?.includes(id) ||
+        file.url?.includes(id) ||
+        file.contactId === id ||
+        file.altId === id
+      );
+
+      console.log(`✅ Found ${allContactFiles.length} files for contact ${id}`);
+
+      // Log all files for this contact
+      if (allContactFiles.length > 0) {
+        console.log("📁 Files for this contact:", JSON.stringify(allContactFiles.map(f => ({
+          name: f.name,
+          url: f.url,
+          id: f.id,
+          contactId: f.contactId,
+          altId: f.altId
+        })), null, 2));
+      }
+
+      // Select the first file for this contact
+      if (allContactFiles.length > 0) {
+        uploadedFile = allContactFiles[0];
+
+        console.log("✅ Selected uploaded file:", {
+          name: uploadedFile?.name,
+          url: uploadedFile?.url,
+          id: uploadedFile?.id
+        });
+      }
+    } catch (fileError) {
+      console.error("⚠️ Error fetching files:", fileError.message);
+      if (fileError.response) {
+        console.error("📁 Files API Error Status:", fileError.response.status);
+        console.error("📁 Files API Error Data:", JSON.stringify(fileError.response.data, null, 2));
+      }
+      // Continue without files - don't fail the entire request
+    }
+
     res.status(200).json({
       message: "Contact fetched successfully from GHL",
       contact: contact,
       notes: contact.notes,
+      uploadedFile: uploadedFile,
+      allContactFiles: allContactFiles, // All files for this contact
     });
   } catch (error) {
     console.error("❌ GHL API Error Details:");
@@ -580,6 +722,12 @@ const updatePatient = async (req, res) => {
 
     console.log("Updating patient with ID:", id);
     console.log("Update data:", JSON.stringify(patientData, null, 2));
+
+    // Store file temporarily (will be processed after we have contact ID)
+    const uploadedFile = req.file;
+    if (uploadedFile) {
+      console.log("📎 File received:", uploadedFile.originalname);
+    }
 
     // Validate required GHL credentials
     if (!GHL_API_KEY) {
@@ -648,6 +796,22 @@ const updatePatient = async (req, res) => {
       ghlPayload.source = source.trim();
     }
 
+    // Fetch study name if study_enrolled_id is provided
+    let studyName = null;
+    if (patientData.study_enrolled_id) {
+      try {
+        const studyData = await studyModel.getStudyById(
+          patientData.study_enrolled_id
+        );
+        if (studyData && studyData.length > 0) {
+          studyName = studyData[0].study_name;
+          console.log("📚 Study name to add:", studyName);
+        }
+      } catch (error) {
+        console.error("⚠️ Error fetching study name:", error.message);
+      }
+    }
+
     // Fetch custom field definitions to get field IDs
     console.log("🔄 Fetching custom field definitions from GHL...");
     const customFieldMap = await fetchCustomFieldMap(
@@ -655,11 +819,12 @@ const updatePatient = async (req, res) => {
       GHL_API_KEY
     );
 
-    // Prepare custom fields for UPDATE using ID-based format
+    // Prepare custom fields for UPDATE using ID-based format (pass studyName)
     // UPDATE uses: { id: "field_id", field_value: "value" }
     const customFieldsToUpdate = buildCustomFieldsForUpdate(
       patientData,
-      customFieldMap
+      customFieldMap,
+      studyName
     );
 
     // Add custom fields to payload if any exist
@@ -673,26 +838,10 @@ const updatePatient = async (req, res) => {
       console.log("ℹ️ No custom fields to update");
     }
 
-    // Fetch study name if study_enrolled_id is provided and add as tag
-    let studyTag = null;
-    if (patientData.study_enrolled_id) {
-      try {
-        const studyData = await studyModel.getStudyById(
-          patientData.study_enrolled_id
-        );
-        if (studyData && studyData.length > 0) {
-          studyTag = studyData[0].study_name;
-          console.log("📚 Study tag to add:", studyTag);
-        }
-      } catch (error) {
-        console.error("⚠️ Error fetching study name:", error.message);
-      }
-    }
-
     // Add study as a tag if it exists
-    if (studyTag) {
-      ghlPayload.tags = [studyTag];
-      console.log("🏷️ Adding study tag to contact:", studyTag);
+    if (studyName) {
+      ghlPayload.tags = [studyName];
+      console.log("🏷️ Adding study tag to contact:", studyName);
     }
 
     // Ensure we have at least one field to update
@@ -729,6 +878,59 @@ const updatePatient = async (req, res) => {
       );
     } else {
       console.log("⚠️ WARNING: No customFields in GHL response!");
+    }
+
+    // Handle file upload if present (AFTER we have contact ID)
+    if (uploadedFile && ghlContactId) {
+      try {
+        console.log("📤 Processing file upload for contact:", ghlContactId);
+
+        // 1. Upload to GHL with contact ID as filename
+        const ghlFileUrl = await uploadFileToGHL(uploadedFile, GHL_API_KEY, ghlContactId);
+        console.log("✅ File uploaded to GHL:", ghlFileUrl);
+
+        // 2. Move file to public/{contactId}/ folder
+        const localFileUrl = moveFileToPublicFolder(uploadedFile, ghlContactId);
+        console.log("✅ File moved to public folder:", localFileUrl);
+
+        // 3. Store local file URL in patientData (for database)
+        patientData.pre_screen_form = localFileUrl;
+
+        // 4. Fetch custom field map and update GHL with file URL
+        try {
+          const customFieldMap = await fetchCustomFieldMap(GHL_API_KEY, GHL_LOCATION_ID);
+
+          if (customFieldMap['pre_screen_form']) {
+            const fileUpdatePayload = {
+              customFields: [
+                { id: customFieldMap['pre_screen_form'], field_value: ghlFileUrl }
+              ]
+            };
+
+            await axios.put(
+              `https://services.leadconnectorhq.com/contacts/${ghlContactId}`,
+              fileUpdatePayload,
+              {
+                headers: {
+                  Authorization: `Bearer ${GHL_API_KEY}`,
+                  Version: "2021-07-28",
+                  "Content-Type": "application/json",
+                },
+              }
+            );
+            console.log("✅ File URL updated in GHL custom field");
+          } else {
+            console.log("⚠️ pre_screen_form custom field not found in GHL");
+          }
+        } catch (ghlUpdateError) {
+          console.error("⚠️ Failed to update GHL with file URL:", ghlUpdateError.message);
+        }
+
+      } catch (error) {
+        console.error("⚠️ File processing failed:", error.message);
+        // Continue without file - don't fail the entire request
+        patientData.pre_screen_form = null;
+      }
     }
 
     // Handle notes update if notes are provided
@@ -1053,6 +1255,20 @@ const getPatientCount = async (req, res) => {
   }
 };
 
+const getpatientLeadSource = async (req, res) => {
+  try {
+    const patientLeadSource = await patientModel.getpatientLeadSource();
+    res.status(200).json(patientLeadSource);
+  } catch (error) {
+    console.error("❌ Error fetching patient lead source:", error.message);
+    res.status(500).json({
+      error: "Failed to fetch patient lead source",
+      message: error.message,
+    });
+  }
+};
+
+
 module.exports = {
   createPatient,
   getPatient,
@@ -1060,4 +1276,5 @@ module.exports = {
   updatePatient,
   deletePatient,
   getPatientCount,
+  getpatientLeadSource
 };

@@ -14,10 +14,13 @@ const GHL_CUSTOM_FIELD_IDS = {
 };
 
 
-const buildCustomFieldsForCreate = (patientData) => {
+const buildCustomFieldsForCreate = (patientData, studyName = null) => {
     const customFields = [];
 
-    // Study is saved as a tag, not as a custom field
+    // Add study_name as custom field if provided
+    if (studyName) {
+        customFields.push({ key: "study_name", field_value: studyName });
+    }
     if (patientData.patientLeadSource) {
         customFields.push({ key: "patient_lead_source", field_value: patientData.patientLeadSource });
     }
@@ -69,15 +72,40 @@ const buildCustomFieldsForCreate = (patientData) => {
     if (patientData.surgeries) {
         customFields.push({ key: "surgeries", field_value: patientData.surgeries });
     }
+    // New custom fields
+    if (patientData.language) {
+        customFields.push({ key: "language", field_value: patientData.language });
+    }
+    if (patientData.bmi) {
+        customFields.push({ key: "bmi", field_value: patientData.bmi });
+    }
+    if (patientData.previous_research_participation) {
+        customFields.push({ key: "previous_research_participation", field_value: patientData.previous_research_participation });
+    }
+    if (patientData.address) {
+        customFields.push({ key: "address1", field_value: patientData.address });
+    }
+    if (patientData.city) {
+        customFields.push({ key: "city", field_value: patientData.city });
+    }
+    if (patientData.state) {
+        customFields.push({ key: "state", field_value: patientData.state });
+    }
+    if (patientData.zip_code) {
+        customFields.push({ key: "postal_code", field_value: patientData.zip_code });
+    }
 
     return customFields;
 };
 
 
-const buildCustomFieldsForUpdate = (patientData, customFieldMap = {}) => {
+const buildCustomFieldsForUpdate = (patientData, customFieldMap = {}, studyName = null) => {
     const customFields = [];
 
-    // Study is saved as a tag, not as a custom field
+    // Add study_name as custom field if provided
+    if (studyName && customFieldMap['study_name']) {
+        customFields.push({ id: customFieldMap['study_name'], field_value: studyName });
+    }
     if (patientData.patientLeadSource && customFieldMap['patient_lead_source']) {
         customFields.push({ id: customFieldMap['patient_lead_source'], field_value: patientData.patientLeadSource });
     }
@@ -129,6 +157,29 @@ const buildCustomFieldsForUpdate = (patientData, customFieldMap = {}) => {
     if (patientData.surgeries && customFieldMap['surgeries']) {
         customFields.push({ id: customFieldMap['surgeries'], field_value: patientData.surgeries });
     }
+    // New custom fields
+    if (patientData.language && customFieldMap['language']) {
+        customFields.push({ id: customFieldMap['language'], field_value: patientData.language });
+    }
+    if (patientData.bmi && customFieldMap['bmi']) {
+        customFields.push({ id: customFieldMap['bmi'], field_value: patientData.bmi });
+    }
+    if (patientData.previous_research_participation && (customFieldMap['previous_research_participation'] || customFieldMap['previous research participation'])) {
+        const fieldId = customFieldMap['previous_research_participation'] || customFieldMap['previous research participation'];
+        customFields.push({ id: fieldId, field_value: patientData.previous_research_participation });
+    }
+    if (patientData.address && customFieldMap['address1']) {
+        customFields.push({ id: customFieldMap['address1'], field_value: patientData.address });
+    }
+    if (patientData.city && customFieldMap['city']) {
+        customFields.push({ id: customFieldMap['city'], field_value: patientData.city });
+    }
+    if (patientData.state && customFieldMap['state']) {
+        customFields.push({ id: customFieldMap['state'], field_value: patientData.state });
+    }
+    if (patientData.zip_code && customFieldMap['postal_code']) {
+        customFields.push({ id: customFieldMap['postal_code'], field_value: patientData.zip_code });
+    }
 
     return customFields;
 };
@@ -164,10 +215,18 @@ const fetchCustomFieldMap = async (locationId, apiKey) => {
         if (Array.isArray(customFields)) {
             customFields.forEach(field => {
                 if (field.name) {
-                    
+                    // Store original name
                     fieldMap[field.name] = field.id;
-           
+
+                    // Store lowercase version
                     fieldMap[field.name.toLowerCase()] = field.id;
+
+                    // Store underscore version (replace spaces with underscores)
+                    const underscoreVersion = field.name.toLowerCase().replace(/ /g, '_');
+                    fieldMap[underscoreVersion] = field.id;
+
+                    console.log(`📋 Mapped field: "${field.name}" -> ID: ${field.id}`);
+                    console.log(`   - Also mapped as: "${field.name.toLowerCase()}" and "${underscoreVersion}"`);
                 }
             });
         }
